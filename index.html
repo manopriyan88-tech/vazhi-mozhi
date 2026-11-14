@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adaptive API Kitchen & Multi-Agent Orchestrator</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --border: #1f2937;
+      --primary: #3b82f6;
+      --accent: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      padding: 24px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 { font-size: 20px; font-weight: 700; color: #fff; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #1e293b;
+      color: #93c5fd;
+    }
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .card h2 {
+      font-size: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #e5e7eb;
+    }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
+    input, textarea, select {
+      width: 100%;
+      padding: 8px 12px;
+      background: #0d131f;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 13px;
+    }
+    input:focus, textarea:focus { outline: none; border-color: var(--primary); }
+    .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+    button {
+      padding: 8px 16px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button:hover { background: #2563eb; }
+    button.secondary { background: #374151; }
+    button.secondary:hover { background: #4b5563; }
+    /* Animated Node Execution Graph */
+    .node-graph {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    .graph-node {
+      flex: 1;
+      min-width: 90px;
+      background: #0d131f;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    .graph-node .node-title { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+    .graph-node .node-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin: 6px auto;
+      background: #4b5563;
+    }
+    .graph-node.running {
+      border-color: var(--primary);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+    }
+    .graph-node.running .node-indicator {
+      background: var(--primary);
+      animation: pulse 1.2s infinite;
+    }
+    .graph-node.success { border-color: var(--accent); }
+    .graph-node.success .node-indicator { background: var(--accent); }
+    .graph-node.warning { border-color: var(--warning); }
+    .graph-node.warning .node-indicator { background: var(--warning); }
+    .graph-node.failed { border-color: var(--danger); }
+    .graph-node.failed .node-indicator { background: var(--danger); }
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.7; }
+    }
+    /* Terminal Console */
+    .terminal-window {
+      background: #070a13;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      height: 320px;
+      overflow-y: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .terminal-line { margin-bottom: 4px; word-break: break-all; }
+    .terminal-line.inspect { color: #38bdf8; }
+    .terminal-line.dispatch { color: #818cf8; }
+    .terminal-line.response { color: #34d399; }
+    .terminal-line.heal { color: #fbbf24; }
+    .terminal-line.done { color: #4ade80; font-weight: 600; }
+    .terminal-line.error { color: #f87171; }
+    /* Key Vault List */
+    .key-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0d131f;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .key-info { display: flex; flex-direction: column; gap: 2px; }
+    .key-masked { font-family: monospace; color: var(--text-muted); font-size: 11px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <h1>🍳 Adaptive API Kitchen & Multi-Agent Orchestrator</h1>
+      <p style="color: var(--text-muted); font-size: 13px;">Dynamic Tool Registration, Resilient Parallel Wave Execution & Live Stream</p>
+    </div>
+    <div class="badge">
+      <span class="badge-dot" id="ws-status-dot"></span>
+      <span id="ws-status-text">Connecting...</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT: Key Vault Registration -->
+    <div class="card">
+      <h2>🔑 API Kitchen Vault (Register 3rd-Party API Key)</h2>
+      <div class="form-group">
+        <label>Provider Name</label>
+        <input id="key-provider" type="text" placeholder="e.g. WeatherAPI, GitHub, Stripe" value="WeatherAPI">
+      </div>
+      <div class="form-group">
+        <label>API Key / Secret Token</label>
+        <input id="key-secret" type="password" placeholder="e.g. your_live_api_key_here" value="demo_key_abcdef123456">
+      </div>
+      <div class="form-group">
+        <label>Sample Endpoint or Docs URL</label>
+        <input id="key-url" type="text" placeholder="e.g. https://api.weatherapi.com/v1/current.json" value="https://api.weatherapi.com/v1/current.json">
+      </div>
+      <div class="btn-row">
+        <button id="btn-register-key">Register & Verify Key</button>
+        <button id="btn-seed-demo" class="secondary">Seed Demo APIs</button>
+      </div>
+
+      <h3 style="font-size: 14px; margin-top: 20px; margin-bottom: 8px; color: var(--text-muted);">Registered Vault Keys</h3>
+      <div id="vault-keys-list">
+        <div style="color: var(--text-muted); font-size: 12px;">Loading keys...</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Prompt Execution & Live Stream -->
+    <div class="card">
+      <h2>🚀 Live Orchestrator Execution</h2>
+      <div class="form-group">
+        <label>User Prompt / Goal</label>
+        <textarea id="prompt-input" rows="3">Fetch live Tokyo weather from Open-Meteo and latest FastAPI repository stars from GitHub</textarea>
+      </div>
+      <div class="btn-row" style="margin-bottom: 16px;">
+        <button id="btn-run-ws">Execute via WebSocket (/ws/execute)</button>
+        <button id="btn-run-sse" class="secondary">Execute via SSE (/api/stream)</button>
+      </div>
+
+      <!-- Animated Node Execution Graph -->
+      <label>Live Node Execution Graph</label>
+      <div class="node-graph" id="node-graph">
+        <div class="graph-node" id="node-vault_inspector">
+          <div class="node-title">Vault</div>
+          <div class="node-indicator"></div>
+        </div>
+        <div class="graph-node" id="node-planner">
+          <div class="node-title">Planner</div>
+          <div class="node-indicator"></div>
+        </div>
+        <div class="graph-node" id="node-wave_1">
+          <div class="node-title">Wave 1</div>
+          <div class="node-indicator"></div>
+        </div>
+        <div class="graph-node" id="node-resilience">
+          <div class="node-title">Resilience</div>
+          <div class="node-indicator"></div>
+        </div>
+        <div class="graph-node" id="node-synthesizer">
+          <div class="node-title">Synthesizer</div>
+          <div class="node-indicator"></div>
+        </div>
+      </div>
+
+      <!-- Live Terminal Console -->
+      <label>Live Stream Terminal Console</label>
+      <div class="terminal-window" id="terminal-window">
+        <div class="terminal-line">[SYSTEM] Ready to execute prompts.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Frontend Bridge Client -->
+  <script src="frontend_bridge.js"></script>
+
+  <script>
+    const {
+      registerKey,
+      listKeys,
+      seedDemo,
+      createExecutionWebSocket,
+      streamExecutionSSE,
+      formatTerminalLog,
+      deriveGraphState
+    } = window.ApiKitchenBridge;
+
+    // Terminal elements
+    const terminalEl = document.getElementById('terminal-window');
+    const wsDot = document.getElementById('ws-status-dot');
+    const wsText = document.getElementById('ws-status-text');
+    const keysListEl = document.getElementById('vault-keys-list');
+
+    let currentGraphState = {};
+
+    function logTerminal(text, cssClass = '') {
+      const line = document.createElement('div');
+      line.className = 'terminal-line ' + cssClass;
+      line.textContent = text;
+      terminalEl.appendChild(line);
+      terminalEl.scrollTop = terminalEl.scrollHeight;
+    }
+
+    function updateNodeGraph(event) {
+      currentGraphState = deriveGraphState(currentGraphState, event);
+      for (const [nodeId, state] of Object.entries(currentGraphState)) {
+        const el = document.getElementById('node-' + nodeId);
+        if (el) {
+          el.className = 'graph-node ' + (state.status || 'idle');
+        }
+      }
+    }
+
+    // Refresh Vault Keys list
+    async function refreshKeys() {
+      try {
+        const keys = await listKeys();
+        if (!keys || keys.length === 0) {
+          keysListEl.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">No keys registered yet. Click "Seed Demo APIs" or register one above.</div>';
+          return;
+        }
+        keysListEl.innerHTML = keys.map(k => `
+          <div class="key-item">
+            <div class="key-info">
+              <strong>${k.provider}</strong>
+              <span class="key-masked">${k.masked_key} (${k.auth_type})</span>
+            </div>
+            <span style="font-size: 11px; color: ${k.is_active ? 'var(--accent)' : 'var(--warning)'};">
+              ${k.is_active ? '● Active' : '○ Standby'}
+            </span>
+          </div>
+        `).join('');
+      } catch (err) {
+        keysListEl.innerHTML = '<div style="color: var(--danger); font-size: 12px;">Failed to load vault keys.</div>';
+      }
+    }
+
+    // Initialize WebSocket
+    const wsClient = createExecutionWebSocket();
+
+    wsClient.on('open', () => {
+      wsDot.style.background = 'var(--accent)';
+      wsText.textContent = 'WS Connected';
+      logTerminal('[SYSTEM] WebSocket /ws/execute connected.');
+    });
+
+    wsClient.on('close', () => {
+      wsDot.style.background = 'var(--danger)';
+      wsText.textContent = 'WS Disconnected';
+      logTerminal('[SYSTEM] WebSocket disconnected. Retrying...');
+    });
+
+    wsClient.on('step', (step, event) => {
+      updateNodeGraph(event);
+    });
+
+    wsClient.on('log', (formattedLine, event) => {
+      let cls = '';
+      if (event.step === 'inspecting_key') cls = 'inspect';
+      else if (event.step === 'calling_3rd_party_api') cls = 'dispatch';
+      else if (event.step === 'api_response_received') cls = 'response';
+      else if (event.step === 'self_healing_started') cls = 'heal';
+      else if (event.step === 'completed') cls = 'done';
+      else if (event.step === 'error') cls = 'error';
+
+      logTerminal(formattedLine, cls);
+    });
+
+    wsClient.connect().catch(err => {
+      console.warn('Initial WS connect attempt:', err);
+    });
+
+    // Execute via WebSocket
+    document.getElementById('btn-run-ws').addEventListener('click', async () => {
+      const prompt = document.getElementById('prompt-input').value.trim();
+      if (!prompt) return;
+
+      logTerminal(`\n>>> Initiating execution via WebSocket: "${prompt}"`);
+      currentGraphState = {};
+      try {
+        const result = await wsClient.executeAsync(prompt);
+        logTerminal(`[RESULT SUMMARY]: ${result.summary || 'Done'}`, 'done');
+      } catch (err) {
+        logTerminal(`[ERROR]: ${err.message}`, 'error');
+      }
+    });
+
+    // Execute via SSE
+    document.getElementById('btn-run-sse').addEventListener('click', () => {
+      const prompt = document.getElementById('prompt-input').value.trim();
+      if (!prompt) return;
+
+      logTerminal(`\n>>> Initiating execution via SSE (/api/stream): "${prompt}"`);
+      currentGraphState = {};
+
+      streamExecutionSSE({
+        prompt,
+        onStep: (step, event) => updateNodeGraph(event),
+        onLog: (line, event) => logTerminal(line),
+        onComplete: (data) => {
+          logTerminal(`[SSE DONE]: ${data.summary || 'Pipeline completed.'}`, 'done');
+        },
+        onError: (err) => {
+          logTerminal(`[SSE ERROR]: ${err.message}`, 'error');
+        }
+      });
+    });
+
+    // Register API Key
+    document.getElementById('btn-register-key').addEventListener('click', async () => {
+      const provider = document.getElementById('key-provider').value.trim();
+      const apiKey = document.getElementById('key-secret').value.trim();
+      const endpointUrl = document.getElementById('key-url').value.trim();
+
+      if (!provider || !apiKey || !endpointUrl) {
+        alert('Please fill out all key registration fields.');
+        return;
+      }
+
+      logTerminal(`\n>>> Registering key for '${provider}'...`);
+      try {
+        const res = await registerKey({ provider, apiKey, endpointUrl });
+        logTerminal(`[VAULT SUCCESS]: ${res.message}`, 'done');
+        await refreshKeys();
+      } catch (err) {
+        logTerminal(`[VAULT ERROR]: ${err.message}`, 'error');
+      }
+    });
+
+    // Seed Demo APIs
+    document.getElementById('btn-seed-demo').addEventListener('click', async () => {
+      logTerminal(`\n>>> Seeding free public demo connectors...`);
+      try {
+        const res = await seedDemo({ execute: false });
+        logTerminal(`[DEMO]: Loaded ${res.seeded_apis_count} connectors.`, 'done');
+        await refreshKeys();
+      } catch (err) {
+        logTerminal(`[DEMO ERROR]: ${err.message}`, 'error');
+      }
+    });
+
+    // Initial load
+    refreshKeys();
+  </script>
+</body>
+</html>

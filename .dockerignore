@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+test_live_flow.py
+
+# Environment & Secrets (managed via docker-compose env_file or environment block)
+.env.local
+
+# IDEs & System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
